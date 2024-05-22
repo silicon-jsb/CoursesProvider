@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.17.5" />
     <PackageReference Include="HotChocolate.ASPNetcore" Version="13.9.4" />
     <PackageReference Include="HotChocolate.ASPNetcore.Playground" Version="10.5.5" />
     <PackageReference Include="HotChocolate.Azurefunctions" Version="13.9.4" />
