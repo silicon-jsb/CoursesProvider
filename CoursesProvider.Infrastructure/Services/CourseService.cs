@@ -21,7 +21,7 @@ public class CourseService(IDbContextFactory<DataContext> contextFactory, Servic
 {
 
     private readonly IDbContextFactory<DataContext> _contextFactory = contextFactory;
-    private readonly ServiceBusHandler _serviceBusHandler;
+    private readonly ServiceBusHandler _serviceBusHandler = serviceBusHandler;
 
 
 

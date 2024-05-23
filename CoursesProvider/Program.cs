@@ -4,6 +4,7 @@ using CoursesProvider.Infrastructure.GraphQL.Mutations;
 using CoursesProvider.Infrastructure.GraphQL.ObjectTypes;
 using CoursesProvider.Infrastructure.Handlers;
 using CoursesProvider.Infrastructure.Services;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,13 +25,17 @@ var host = new HostBuilder()
 		});
 
 		services.AddScoped<ICourseService, CourseService>();
+        services.AddSingleton<CosmosClient>(sp =>
+    new CosmosClient(Environment.GetEnvironmentVariable("COSMOS_URI")!));
+
         services.AddSingleton<ServiceBusHandler>(sp =>
 		new ServiceBusHandler(
          sp.GetRequiredService<ILogger<ServiceBusHandler>>(),
          "Endpoint=sb://courseprovider.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Q/rrVPV452ftyNuC9dEJDV84IoWUbvz8l+ASbDvjztg=",
          "courseprovider",
          "BackofficeApp",
-         "FrontEndApp"
+         "FrontEndApp",
+         sp.GetRequiredService<CosmosClient>()
      )
  );
 

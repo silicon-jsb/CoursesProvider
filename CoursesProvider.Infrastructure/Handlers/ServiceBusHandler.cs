@@ -1,9 +1,9 @@
 ﻿using Azure.Messaging.ServiceBus;
-using Castle.Core.Logging;
-using HotChocolate.Subscriptions;
+using CoursesProvider.Infrastructure.Models;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
+
 
 namespace CoursesProvider.Infrastructure.Handlers;
 
@@ -15,9 +15,10 @@ public class ServiceBusHandler
     private readonly ServiceBusProcessor _processorFrontEndApp;
 
     private readonly ILogger<ServiceBusHandler> _logger;
+    private readonly CosmosClient _cosmosClient;
 
 
-    public ServiceBusHandler(ILogger<ServiceBusHandler> logger, string connectionString, string courseprovider, string BackofficeApp, string FrontEndApp)
+    public ServiceBusHandler(ILogger<ServiceBusHandler> logger, string connectionString, string courseprovider, string BackofficeApp, string FrontEndApp, CosmosClient cosmosClient)
     {
         _logger = logger;
         _client = new ServiceBusClient(connectionString);
@@ -30,6 +31,7 @@ public class ServiceBusHandler
 
         _processorFrontEndApp.ProcessMessageAsync += MessageHandler;
         _processorFrontEndApp.ProcessErrorAsync += ErrorHandler;
+        _cosmosClient = cosmosClient;
     }
 
     private Task ErrorHandler(ProcessErrorEventArgs args)
@@ -44,6 +46,11 @@ public class ServiceBusHandler
         {
             string message = args.Message.Body.ToString();
             _logger.LogInformation("Received message: {Message}");
+            var course = JsonConvert.DeserializeObject<Course>(message);
+
+            var container = _cosmosClient.GetContainer("backofficecourses", "Courses");
+            var response = await container.UpsertItemAsync(course, new PartitionKey(course.Id));
+
 
             await PublishAsync(message);
 

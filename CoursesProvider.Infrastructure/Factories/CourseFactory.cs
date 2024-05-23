@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using CoursesProvider.Infrastructure.Data.Entities;
+﻿using CoursesProvider.Infrastructure.Data.Entities;
 using CoursesProvider.Infrastructure.Models;
 
 namespace CoursesProvider.Infrastructure.Factories;
