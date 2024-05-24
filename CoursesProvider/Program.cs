@@ -1,3 +1,4 @@
+using Azure.Identity;
 using CoursesProvider.Infrastructure.Data.Contexts;
 using CoursesProvider.Infrastructure.GraphQL;
 using CoursesProvider.Infrastructure.GraphQL.Mutations;
@@ -7,57 +8,59 @@ using CoursesProvider.Infrastructure.Services;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Configuration;
 
 var host = new HostBuilder()
-	.ConfigureFunctionsWebApplication()
-	.ConfigureServices(services =>
-	{
-		services.AddApplicationInsightsTelemetryWorkerService();
-		services.ConfigureFunctionsApplicationInsights();
+    .ConfigureFunctionsWebApplication()
+    .ConfigureServices(services =>
+    {
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
 
-		services.AddPooledDbContextFactory<DataContext>(x =>
-		{
-			x.UseCosmos(Environment.GetEnvironmentVariable("COSMOS_URI")!, Environment.GetEnvironmentVariable("COSMOS_DBNAME")!)
-			.UseLazyLoadingProxies();
-		});
+        services.AddPooledDbContextFactory<DataContext>(x =>
+        {
+            x.UseCosmos(Environment.GetEnvironmentVariable("COSMOS_URI")!, Environment.GetEnvironmentVariable("COSMOS_DBNAME")!)
+            .UseLazyLoadingProxies();
+        });
 
-		services.AddScoped<ICourseService, CourseService>();
+        services.AddScoped<ICourseService, CourseService>();
         services.AddSingleton<CosmosClient>(sp =>
-    new CosmosClient(Environment.GetEnvironmentVariable("COSMOS_URI")!));
-
+            new CosmosClient(Environment.GetEnvironmentVariable("COSMOS_URI")!));
         services.AddSingleton<ServiceBusHandler>(sp =>
-		new ServiceBusHandler(
-         sp.GetRequiredService<ILogger<ServiceBusHandler>>(),
-         "Endpoint=sb://courseprovider.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Q/rrVPV452ftyNuC9dEJDV84IoWUbvz8l+ASbDvjztg=",
-         "courseprovider",
-         "BackofficeApp",
-         "FrontEndApp",
-         sp.GetRequiredService<CosmosClient>()
-     )
- );
-
+        {
+            var configuration = sp.GetRequiredService<IConfiguration>();
+            return new ServiceBusHandler(
+                sp.GetRequiredService<ILogger<ServiceBusHandler>>(),
+                configuration,
+                configuration["Servicebus"],
+                configuration["courseprovider"],
+                configuration["BackofficeApp"],
+                configuration["FrontEndApp"],
+                sp.GetRequiredService<CosmosClient>()
+            );
+        });
 
         services.AddGraphQLFunction()
-		.AddQueryType<CourseQuery>()
-		.AddMutationType<CourseMutation>()
-		.AddType<CourseType>();
+            .AddQueryType<CourseQuery>()
+            .AddMutationType<CourseMutation>()
+            .AddType<CourseType>();
 
-		var sp = services.BuildServiceProvider();
-		using var scope = sp.CreateScope();
-		var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<DataContext>>();
-		using var context = dbContextFactory.CreateDbContext();
-		context.Database.EnsureCreated();
-	})
-	.Build();
+        var sp = services.BuildServiceProvider();
+        using var scope = sp.CreateScope();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<DataContext>>();
+        using var context = dbContextFactory.CreateDbContext();
+        context.Database.EnsureCreated();
+    })
+   
+    .Build();
 
 var cancellationTokenSource = new CancellationTokenSource();
 var serviceBusHandler = host.Services.GetRequiredService<ServiceBusHandler>();
 await serviceBusHandler.StartAsync(cancellationTokenSource.Token);
-
-
 
 host.Run();
 
