@@ -46,7 +46,7 @@ public static class CourseFactory
 		};
 	}
 
-	public static CourseEntity Update(CourseUpdateRequest request)
+	public static CourseEntity Create(CourseUpdateRequest request)
 	{
 		return new CourseEntity
 		{

@@ -1,10 +1,8 @@
 ﻿using CoursesProvider.Infrastructure.Data.Contexts;
-using CoursesProvider.Infrastructure.Data.Entities;
 using CoursesProvider.Infrastructure.Factories;
-using CoursesProvider.Infrastructure.Handlers;
 using CoursesProvider.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
+
 
 namespace CoursesProvider.Infrastructure.Services;
 
@@ -17,14 +15,11 @@ public interface ICourseService
 	Task<Course> UpdateCourseAsync(CourseUpdateRequest request);
 	Task<bool> DeleteCourseAsync(string id);
 }
-public class CourseService(IDbContextFactory<DataContext> contextFactory, ServiceBusHandler serviceBusHandler) : ICourseService
+public class CourseService(IDbContextFactory<DataContext> contextFactory ) : ICourseService
 {
 
     private readonly IDbContextFactory<DataContext> _contextFactory = contextFactory;
-    private readonly ServiceBusHandler _serviceBusHandler = serviceBusHandler;
-
-
-
+    
 
     public async Task<Course> CreateCourseAsync(CourseCreateRequest request)
     {
@@ -34,11 +29,7 @@ public class CourseService(IDbContextFactory<DataContext> contextFactory, Servic
         context.Courses.Add(courseEntity);
         await context.SaveChangesAsync();
 
-        // Send a message to Service Bus
-        await _serviceBusHandler.PublishAsync(JsonConvert.SerializeObject(courseEntity), "CourseCreated");
-
-
-
+      
         return CourseFactory.Create(courseEntity);
        
 
@@ -55,9 +46,7 @@ public class CourseService(IDbContextFactory<DataContext> contextFactory, Servic
         context.Courses.Remove(courseEntity);
         await context.SaveChangesAsync();
 
-        // Send a message to Service Bus
-        await _serviceBusHandler.PublishAsync(JsonConvert.SerializeObject(courseEntity), "CourseDeleted");
-
+       
         return true;
     }
 
@@ -86,55 +75,13 @@ public class CourseService(IDbContextFactory<DataContext> contextFactory, Servic
         var existingCourse = await context.Courses.FirstOrDefaultAsync(x => x.Id == request.Id);
         if (existingCourse == null) return null!;
 
-        var updatedCourseEntity = CourseFactory.Update(request);
+        var updatedCourseEntity = CourseFactory.Create(request);
         updatedCourseEntity.Id = existingCourse.Id;
-        // Create a copy of updatedCourseEntity to send to Service Bus
-        var updatedCourseEntityCopy = new CourseEntity
-        {
-            Id = updatedCourseEntity.Id,
-            ImageUri = updatedCourseEntity.ImageUri,
-            ImageHeaderUri = updatedCourseEntity.ImageHeaderUri,
-            IsBestseller = updatedCourseEntity.IsBestseller,
-            IsDigital = updatedCourseEntity.IsDigital,
-            Categories = updatedCourseEntity.Categories,
-            Title = updatedCourseEntity.Title,
-            Ingress = updatedCourseEntity.Ingress,
-            StarRating = updatedCourseEntity.StarRating,
-            Reviews = updatedCourseEntity.Reviews,
-            Likes = updatedCourseEntity.Likes,
-            LikesInPercent = updatedCourseEntity.LikesInPercent,
-            Hours = updatedCourseEntity.Hours,
-            Authors = updatedCourseEntity.Authors?.Select(a => new AuthorEntity
-            {
-                Name = a.Name,
-                AuthorImage = a.AuthorImage
-            }).ToList(),
-            Prices = updatedCourseEntity.Prices == null ? null : new PricesEntity
-            {
-                Currency = updatedCourseEntity.Prices.Currency,
-                Price = updatedCourseEntity.Prices.Price,
-                Discount = updatedCourseEntity.Prices.Discount
-            },
-            Content = updatedCourseEntity.Content == null ? null : new ContentEntity
-            {
-                Description = updatedCourseEntity.Content.Description,
-                Includes = updatedCourseEntity.Content.Includes,
-                ProgramDetails = updatedCourseEntity.Content.ProgramDetails?.Select(pd => new ProgramDetailItemEntity
-                {
-                    Id = pd.Id,
-                    Title = pd.Title,
-                    Description = pd.Description
-                }).ToList()
-            }
-        };
-
         context.Entry(existingCourse).CurrentValues.SetValues(updatedCourseEntity);
 
         await context.SaveChangesAsync();
 
-        // Send a message to Service Bus
-        await _serviceBusHandler.PublishAsync(JsonConvert.SerializeObject(updatedCourseEntityCopy), "CourseUpdated");
-
+      
         return CourseFactory.Create(existingCourse);
     }
 }

@@ -17,6 +17,7 @@ public class DataContext(DbContextOptions<DataContext> options) : DbContext(opti
 		}
 	}
 
+	//Motsvarar tabeller till databas.
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		modelBuilder.Entity<CourseEntity>().ToContainer("Courses");

@@ -1,6 +1,4 @@
-﻿
-
-namespace CoursesProvider.Infrastructure.Models;
+﻿namespace CoursesProvider.Infrastructure.Models;
 
 public class Course
 {

@@ -5,6 +5,7 @@ using CoursesProvider.Infrastructure.Services;
 
 namespace CoursesProvider.Infrastructure.GraphQL.Mutations;
 
+//Hämtas in till systemet
 public class CourseMutation(ICourseService courseService)
 {
 	private readonly ICourseService _courseService = courseService;

@@ -3,6 +3,7 @@ using CoursesProvider.Infrastructure.Services;
 
 namespace CoursesProvider.Infrastructure.GraphQL;
 
+//Hämtas ut från systemet
 public class CourseQuery(ICourseService courseService)
 {
 	private readonly ICourseService _courseService = courseService;
