@@ -51,7 +51,6 @@ public class CourseService(IDbContextFactory<DataContext> contextFactory ) : ICo
     }
 
 
-
     public async Task<Course> GetCourseByIdAsync(string id)
     {
         await using var context = _contextFactory.CreateDbContext();
